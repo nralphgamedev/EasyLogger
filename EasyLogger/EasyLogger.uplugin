@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "EasyLogger",
+	"Description": "Logging functions for use in BP or C++",
+	"Category": "Other",
+	"CreatedBy": "Nathan Ralph",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "EasyLogger",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
