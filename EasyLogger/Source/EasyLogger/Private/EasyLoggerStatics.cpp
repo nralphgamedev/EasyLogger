@@ -9,19 +9,19 @@
 DEFINE_LOG_CATEGORY_STATIC(EasyLogger, Display, All);
 
 void UEasyLoggerStatics::EZLog(const UObject* WorldContextObject, const FString& InString,
-                               const EEZLogSeverity Severity, const bool bPrintToScreen, float Duration)
+                               const EEZLogSeverity Severity, const EEZLogPrintType PrintType, float Duration)
 {
-	EZLogInternal(false, WorldContextObject, InString, Severity, bPrintToScreen, Duration);
+	EZLogInternal(false, WorldContextObject, InString, Severity, PrintType, Duration);
 }
 
 void UEasyLoggerStatics::EZLog(const UObject* WorldContextObject, const char* Origin, const FString& InString,
-                               const EEZLogSeverity Severity, const bool bPrintToScreen, float Duration)
+                               const EEZLogSeverity Severity, const EEZLogPrintType PrintType, float Duration)
 {
-	EZLogInternal(true, WorldContextObject, FString(Origin) + "() " + InString, Severity, bPrintToScreen, Duration);
+	EZLogInternal(true, WorldContextObject, FString(Origin) + "() " + InString, Severity, PrintType, Duration);
 }
 
 void UEasyLoggerStatics::EZLogInternal(const bool bFromCPP, const UObject* WorldContextObject, const FString& InString,
-                                       const EEZLogSeverity Severity, const bool bPrintToScreen, float Duration)
+                                       const EEZLogSeverity Severity, const EEZLogPrintType PrintType, float Duration)
 {
 	// Do not Print in Shipping or Test.
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -73,25 +73,6 @@ void UEasyLoggerStatics::EZLogInternal(const bool bFromCPP, const UObject* World
 
 	const FString FinalLogString = Prefix + InString;
 
-	FLinearColor DisplayColor = FLinearColor::White;
-	switch (Severity)
-	{
-	case EEZLogSeverity::Display:
-		DisplayColor = FLinearColor(0.0, 0.66, 1.0);
-		UE_LOG(EasyLogger, Display, TEXT("%s"), *FinalLogString);
-		break;
-	case EEZLogSeverity::Warning:
-		DisplayColor = FLinearColor::Yellow;
-		UE_LOG(EasyLogger, Warning, TEXT("%s"), *FinalLogString);
-		break;
-	case EEZLogSeverity::Error:
-		DisplayColor = FLinearColor::Red;
-		UE_LOG(EasyLogger, Error, TEXT("%s"), *FinalLogString);
-		break;
-	default:
-		break;
-	}
-
 	const APlayerController* PC = (WorldContextObject
 		                               ? UGameplayStatics::GetPlayerController(WorldContextObject, 0)
 		                               : nullptr);
@@ -102,21 +83,55 @@ void UEasyLoggerStatics::EZLogInternal(const bool bFromCPP, const UObject* World
 		LocalPlayer->ViewportClient->ViewportConsole->OutputText(FinalLogString);
 	}
 
-	// Also output to the screen, if possible.
-	if (bPrintToScreen)
+	// Log to the output log.
+	if (PrintType == EEZLogPrintType::ScreenAndLog || PrintType == EEZLogPrintType::LogOnly)
 	{
-		if (GAreScreenMessagesEnabled)
+		switch (Severity)
 		{
-			if (Duration > 0)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, Duration, DisplayColor.ToFColor(true), FinalLogString);
-			}
+		case EEZLogSeverity::Display:
+			UE_LOG(EasyLogger, Display, TEXT("%s"), *FinalLogString);
+			break;
+		case EEZLogSeverity::Warning:
+			UE_LOG(EasyLogger, Warning, TEXT("%s"), *FinalLogString);
+			break;
+		case EEZLogSeverity::Error:
+			UE_LOG(EasyLogger, Error, TEXT("%s"), *FinalLogString);
+			break;
+		default:
+			break;
 		}
-		else
+	}
+
+	// Also output to the screen, if possible.
+	if ((PrintType == EEZLogPrintType::ScreenAndLog || PrintType == EEZLogPrintType::ScreenOnly) &&
+		GAreScreenMessagesEnabled)
+	{
+		// Determine the on screen color of the log.
+		FLinearColor DisplayColor = FLinearColor::White;
+		switch (Severity)
 		{
-			UE_LOG(EasyLogger, VeryVerbose,
-			       TEXT("Screen messages disabled (!GAreScreenMessagesEnabled).  Cannot print to screen."));
+		case EEZLogSeverity::Display:
+			DisplayColor = FLinearColor(0.0, 0.66, 1.0);
+			break;
+		case EEZLogSeverity::Warning:
+			DisplayColor = FLinearColor::Yellow;
+			break;
+		case EEZLogSeverity::Error:
+			DisplayColor = FLinearColor::Red;
+			break;
+		default:
+			break;
 		}
+
+		if (Duration > 0)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, Duration, DisplayColor.ToFColor(true), FinalLogString);
+		}
+	}
+	else if (!GAreScreenMessagesEnabled)
+	{
+		UE_LOG(EasyLogger, VeryVerbose,
+		       TEXT("Screen messages disabled (!GAreScreenMessagesEnabled).  Cannot print to screen."));
 	}
 #endif
 }
